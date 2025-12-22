@@ -1,10 +1,5 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
-if TYPE_CHECKING:
-    import numpy as np
-
-from vision.engines.paddle import PaddleOCREngine
-from vision.engines.clova import ClovaOCREngine
+from typing import Optional
+import numpy as np
 from vision.verifier import is_plate_like, plate_similarity
 from vision.result import PlateResult
 
@@ -23,8 +18,17 @@ class PlateNumberDetector:
         ocr_params = ocr_params or {}
 
         if model == "paddle":
-            self.engine = PaddleOCREngine(**ocr_params, **engine_kwargs)
+            try:
+                from vision.engines.paddle import PaddleOCREngine
+                self.engine = PaddleOCREngine(**ocr_params, **engine_kwargs)
+            except Exception as e:
+                raise RuntimeError(
+                    f"It appears that the required environment for PaddleOCR has not been set up correctly. \
+                    Please check the compatibility of your environment by referring to the following link: \
+                    https://github.com/PaddlePaddle/PaddleOCR")
+
         elif model == "clova":
+            from vision.engines.clova import ClovaOCREngine
             self.engine = ClovaOCREngine(**ocr_params, **engine_kwargs)
         else:
             raise ValueError(f"Unsupported OCR model: {model} (support only 'paddle', 'clova'")
