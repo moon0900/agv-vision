@@ -1,5 +1,7 @@
 from vision.detector import PlateNumberDetector
+from vision.preprocessor import ImagePreprocessor
 import cv2
+
 
 # 그냥 카메라에서 프레임 1장 캡처해오는 함수 테스트용
 def get_frame():
@@ -28,12 +30,26 @@ detector = PlateNumberDetector(
     debug_mode=True,                # 디버그 모드 : 사전 OCR 데이터(data/demo/에 존재) 불러오기 -> API 호출 수 줄이거나 모델 로드 리소스 생략 가능
 )
 
+# 이미지 전처리 객체
+image_preprocessor = ImagePreprocessor(
+    gamma=1.5,                      # 이미지의 감마 값 (1보다 큰 값은 어두운 영역을 더 밝게, 작은 값은 밝은 영역을 더 어둡게 조정)
+    clahe_clip_limit=4.0,           # CLAHE 기법 적용 시, 대비 제한 값 (큰 값은 강한 대비를, 작은 값은 약한 대비를 적용)
+    contrast_alpha=1.5,             # 전체 이미지의 대비 조정 강도 (1은 변경 없음, 값이 클수록 대비가 강해짐)
+    contrast_beta=0                 # 전체 이미지의 밝기 조정 값 (0은 변경 없음, 양수는 밝기 증가, 음수는 감소)
+)
 
 # 카메라에서 불러온 프레임
 frame = get_frame()
 
+# 적용 가능한 전처리 기능
+# img = image_preprocessor.gamma(frame)                     # 이미지의 감마 값 조절
+# img = image_preprocessor.adjust_contrast(frame)           # 전체 이미지의 대비 조정
+# img = image_preprocessor.to_grayscale(frame)              # 흑백 변환
+# img = image_preprocessor.binarize(frame)                  # 이진화
+preprocessed = image_preprocessor.gamma_correction(frame)            # CLACHE 기법 적용
+
 # 현재 프레임에서 찾고자하는 번호판이 있는지
-result = detector.detect(frame, target='630모8800')
+result = detector.detect(preprocessed, target='630모8800')
 
 # 만약 임계치를 넘는 인식 결과가 없으면 result는 None
 # 임계치를 넘는 결과가 있으면 다음과 같은 정보가 저장됨
