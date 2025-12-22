@@ -14,7 +14,7 @@
   * `clova` : Clova OCR API
 * 타겟 번호판 문자열과의 유사도 기반 필터링
 * 디버그 모드 지원 (사전 OCR 결과 사용, `data/demo`위치에 있는 데이터를 대신 사용)
-
+* OCR 전 이미지 전처리
 
 ## 디렉토리 구조
 
@@ -68,8 +68,19 @@ detector = PlateNumberDetector(
     debug_mode=True,            # data/demo 사용
 )
 
-# 특정 프레임에 대한 
-result = detector.detect(frame, target="630모8800")
+# 이미지 전처리 객체 생성
+image_preprocessor = ImagePreprocessor(
+    gamma=1.5,                      # 이미지의 감마 값
+    clahe_clip_limit=4.0,           # CLAHE 기법 적용 시, 대비 제한 값
+    contrast_alpha=1.5,             # 전체 이미지의 대비 조정 강도
+    contrast_beta=0                 # 전체 이미지의 밝기 조정 값
+)
+
+# CLACHE 기법 적용
+preprocessed = image_preprocessor.gamma_correction(frame)            
+
+# OCR을 통한 번호판 인식(target 번호판만을 탐지 결과로 반환)
+result = detector.detect(preprocessed, target="630모8800")
 
 if result:
     print(result.text, result.similarity, result.bbox)
