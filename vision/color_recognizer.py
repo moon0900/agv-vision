@@ -40,7 +40,7 @@ class ColorRecognizer(threading.Thread):
             'purple': [(120, 61, 82), (151, 255, 255)]
         }
 
-    def balance_white(img, p=0.5):
+    def balance_white(self, img, p=0.5):
         """
         각 채널별로 밝기 분포를 분석하여 톤을 균일하게 맞춤 (White Patch 가설 기반)
         p: 각 채널에서 흰색으로 간주할 상위 퍼센트
