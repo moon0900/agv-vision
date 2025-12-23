@@ -20,8 +20,6 @@ class ColorRecognizer(threading.Thread):
         self.stopped = False
         self.daemon = True  # 프로그램 종료 시 함께 종료
 
-        self.wb = cv2.xphoto.createSimpleWB() # 화이트 밸런스 객체 생성
-
         # roi 영역(상단은 반드시 제외할 높이 비율, 하단은 반드시 유지할 높이 비율)
         self.roi_top = roi_top
         self.roi_bottom = roi_bottom
@@ -41,6 +39,30 @@ class ColorRecognizer(threading.Thread):
             'blue': [(100, 56, 116), (116, 255, 255)],
             'purple': [(120, 61, 82), (151, 255, 255)]
         }
+
+    def balance_white(img, p=0.5):
+        """
+        각 채널별로 밝기 분포를 분석하여 톤을 균일하게 맞춤 (White Patch 가설 기반)
+        p: 각 채널에서 흰색으로 간주할 상위 퍼센트
+        """
+        assert img.dtype == np.uint8
+        out = img.astype(np.float32)
+
+        # 각 채널별로 독립적인 scaling 적용
+        for c in range(3):
+            channel = out[:, :, c]
+
+            # 각 채널의 하위 p%와 상위 p% 지점 찾기
+            low = np.percentile(channel, p)
+            high = np.percentile(channel, 100 - p)
+
+            # 채널별로 0~255로 꽉 채워 확장 (이 과정에서 톤이 중립화됨)
+            if high > low:
+                channel = (channel - low) / (high - low) * 255
+
+            out[:, :, c] = channel
+
+        return np.clip(out, 0, 255).astype(np.uint8)
 
     def get_floor_mask(self, hsv, h):
         # 흰색 바닥 추출
@@ -81,8 +103,8 @@ class ColorRecognizer(threading.Thread):
             if not self.input_queue.empty():
                 frame = self.input_queue.get()
 
-                # 톤밸런싱 적용
-                img = self.wb.balanceWhite(frame)
+                # 톤 밸런싱 적용
+                img = self.balance_white(frame)
 
                 # HSV 값 구하기
                 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
