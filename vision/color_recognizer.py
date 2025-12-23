@@ -33,22 +33,35 @@ class ColorRecognizer(threading.Thread):
         self.white_range = (np.array([0, 0, 163]), np.array([179, 50, 255]))
         self.color_ranges = {
             'red': [(0, 70, 115), (7, 255, 255), (167, 80, 83), (179, 255, 255)],
-            'orange': [(9, 45, 87), (19, 255, 255)],
+            'orange': [(9, 70, 87), (19, 255, 255)],
             'yellow': [(21, 68, 121), (34, 255, 255)],
             'green': [(43, 83, 114), (88, 255, 255)],
-            'blue': [(100, 56, 116), (116, 255, 255)],
+            'blue': [(100, 70, 116), (116, 255, 255)],
             'purple': [(120, 61, 82), (151, 255, 255)]
         }
+        
+    def enhance_brightness(self, img):
+        # LAB 색공간으로 변환 (L: 밝기, A/B: 색상)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
 
-    def balance_white(self, img, p=0.5):
+        # 대비 제한 적응형 히스토그램 평활화 적용
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+
+        # 다시 합치기
+        enhanced_lab = cv2.merge((l, a, b))
+        return cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+
+    def balance_white(self, img, p=1.0):
         """
         각 채널별로 밝기 분포를 분석하여 톤을 균일하게 맞춤 (White Patch 가설 기반)
         p: 각 채널에서 흰색으로 간주할 상위 퍼센트
         """
         assert img.dtype == np.uint8
+            
+        # 색상 톤 조절: 각 채널별로 독립적인 scaling 적용
         out = img.astype(np.float32)
-
-        # 각 채널별로 독립적인 scaling 적용
         for c in range(3):
             channel = out[:, :, c]
 
@@ -104,7 +117,8 @@ class ColorRecognizer(threading.Thread):
                 frame = self.input_queue.get()
 
                 # 톤 밸런싱 적용
-                img = self.balance_white(frame)
+                img = self.enhance_brightness(frame)
+                img = self.balance_white(img)
 
                 # HSV 값 구하기
                 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -124,7 +138,7 @@ class ColorRecognizer(threading.Thread):
                     roi_color_mask = cv2.bitwise_and(floor_roi_mask, color_mask)
                     area_size = cv2.countNonZero(roi_color_mask)
                     area_size_ratio = area_size * 1.0 / (h * w)
-                    print(color_name, area_size, area_size_ratio)
+                    # print(color_name, area_size, area_size_ratio)
                     if area_size_ratio > largest_area_size:
                         largest_area_size = area_size_ratio
                         largest_color = color_name
