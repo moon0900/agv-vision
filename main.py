@@ -1,55 +1,27 @@
 from vision.detector import PlateNumberDetector
-from vision.preprocessor import ImagePreprocessor
 import cv2
 
 
 # 그냥 카메라에서 프레임 1장 캡처해오는 함수 테스트용
 def get_frame():
-    # 카메라 열기
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-
-    # 카메라 열기 실패 체크
-    if not cap.isOpened():
-        print("카메라를 열 수 없습니다.")
-        exit(1)
-
-    ret, frame = cap.read()
-    if not ret:
-        print("프레임을 읽지 못했습니다.")
-        assert ()
-
+    frame = cv2.imread("./data/demo/test1.png")
     return frame
 
 
 # 번호판 인식 객체 로드
-# 주의: OCR 테스트를 많이 하고 싶으면 model을 paddle로 지정해서 로컬 모델로 돌릴 것!
-# clova ocr api 호출 수 너무 늘어나지 않게 주의
+# ! apply_preprocess 옵션 활용 시 기본 전처리 기법이 적용되며,
+#   별도의 전처리 프로세스를 따르고 싶을 때는 이를 False로 변경한 후,
+#   vision/utils/image_proc.py의 전처리 함수들을 활용 가능
 detector = PlateNumberDetector(
-    model="paddle",                 # OCR할 엔진 선택 ("paddle" 또는 "clova")
+    model="clova",                 # OCR할 엔진 선택 ("paddle" 또는 "clova")
     plate_similarity_thresh=82,     # 타겟 번호판과 일치하는지 판단할 유사도 임계치(기본값 80)
+    apply_preprocess=True,          # 전처리 적용 여부 (CLACHE 기법)
     debug_mode=True,                # 디버그 모드 : 사전 OCR 데이터(data/demo/에 존재) 불러오기 -> API 호출 수 줄이거나 모델 로드 리소스 생략 가능
 )
 
-# 이미지 전처리 객체
-image_preprocessor = ImagePreprocessor(
-    gamma=1.5,                      # 이미지의 감마 값 (1보다 큰 값은 어두운 영역을 더 밝게, 작은 값은 밝은 영역을 더 어둡게 조정)
-    clahe_clip_limit=4.0,           # CLAHE 기법 적용 시, 대비 제한 값 (큰 값은 강한 대비를, 작은 값은 약한 대비를 적용)
-    contrast_alpha=1.5,             # 전체 이미지의 대비 조정 강도 (1은 변경 없음, 값이 클수록 대비가 강해짐)
-    contrast_beta=0                 # 전체 이미지의 밝기 조정 값 (0은 변경 없음, 양수는 밝기 증가, 음수는 감소)
-)
-
-# 카메라에서 불러온 프레임
-frame = get_frame()
-
-# 적용 가능한 전처리 기능
-# img = image_preprocessor.gamma(frame)                     # 이미지의 감마 값 조절
-# img = image_preprocessor.adjust_contrast(frame)           # 전체 이미지의 대비 조정
-# img = image_preprocessor.to_grayscale(frame)              # 흑백 변환
-# img = image_preprocessor.binarize(frame)                  # 이진화
-preprocessed = image_preprocessor.gamma_correction(frame)            # CLACHE 기법 적용
-
 # 현재 프레임에서 찾고자하는 번호판이 있는지
-result = detector.detect(preprocessed, target='630모8800')
+frame = get_frame()
+result = detector.detect(frame, target='630모8800')
 
 # 만약 임계치를 넘는 인식 결과가 없으면 result는 None
 # 임계치를 넘는 결과가 있으면 다음과 같은 정보가 저장됨

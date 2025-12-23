@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
+import numpy as np
 
 @dataclass
 class RawOCR:
@@ -12,3 +13,10 @@ class PlateResult:
     text: str
     similarity: float
     bbox: Tuple[int, int, int, int]  # (x1, y1, x2, y2)
+
+
+@dataclass
+class ColorRecognitionResult:
+    color: str
+    area_ratio: float
+    mask: Optional[np.ndarray] = None
